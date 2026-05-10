@@ -246,7 +246,7 @@ body { font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:#
         </div>
         <div class="form-row full">
           <div class="fg">
-            <label>사진 첨부 <span class="opt">(선택, 최대 3장)</span></label>
+            <label>사진 첨부 <span class="opt">(선택, 최대 10장)</span></label>
             <label class="file-label">
               📎 사진을 선택하세요
               <input type="file" id="f-images" accept="image/*" multiple onchange="previewFiles(this)">
@@ -329,7 +329,7 @@ function formatNumber(el) {
 
 // ── 파일 미리보기 ──────────────────────────────────────
 function previewFiles(input) {
-  const files = Array.from(input.files).slice(0, 3);
+  const files = Array.from(input.files).slice(0, 10);
   document.getElementById('file-name').textContent = files.map(f => f.name).join(', ');
   const wrap = document.getElementById('preview-wrap');
   wrap.innerHTML = '';
@@ -390,7 +390,7 @@ async function submitForm() {
   try {
     // 이미지 업로드
     const imageUrls = [];
-    for (const file of Array.from(files).slice(0, 3)) {
+    for (const file of Array.from(files).slice(0, 10)) {
       const storageRef = window._ref(window._storage, `inquiries/${Date.now()}_${file.name}`);
       await window._uploadBytes(storageRef, file);
       const url = await window._getDownloadURL(storageRef);
