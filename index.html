@@ -14,7 +14,7 @@
 <!-- Firebase SDK -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp }
+  import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp, deleteDoc, doc, updateDoc }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
   import { getStorage, ref, uploadBytes, getDownloadURL }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
@@ -45,6 +45,9 @@
   window._uploadBytes   = uploadBytes;
   window._getDownloadURL = getDownloadURL;
 
+  window._deleteDoc = deleteDoc;
+  window._updateDoc = updateDoc;
+  window._doc = doc;
   window._firebaseReady = true;
   document.dispatchEvent(new Event('firebaseReady'));
 </script>
@@ -57,7 +60,7 @@ body { font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:#
 .banner { background:#1A3FA9; padding:28px 40px; display:flex; align-items:center; justify-content:space-between; }
 .banner h1 { font-size:26px; font-weight:900; color:#fff; }
 .banner p  { font-size:13px; color:rgba(255,255,255,0.7); margin-top:4px; }
-.banner-icon { font-size:44px; opacity:0.2; }
+.banner-icon { font-size:44px; opacity:0.9; }
 
 /* 탭 */
 .tabs { display:flex; background:#fff; border-bottom:2px solid #eef0f8; }
@@ -420,7 +423,8 @@ async function submitForm() {
       model:   model   || '-',
       price:   price   || '-',
       message: message,
-      time:    new Date().toLocaleString('ko-KR')
+      time:    new Date().toLocaleString('ko-KR'),
+      images:  imageUrls.length > 0 ? imageUrls.map((u,i) => `사진${i+1}: ${u}`).join('\n') : '첨부 없음'
     }).then(() => {
       console.log('이메일 알림 발송 완료');
     }).catch(err => {
@@ -477,7 +481,10 @@ function renderList(posts) {
           <span class="post-title">${p.name||p.company||'(이름없음)'}</span>
           <span class="post-type">${p.type||'기타'}</span>
         </div>
-        <span style="font-size:11px;color:#bbb;white-space:nowrap;">${fmtDate(p.createdAt)}</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:11px;color:#bbb;white-space:nowrap;">${fmtDate(p.createdAt)}</span>
+          <button onclick="event.stopPropagation();deletePost(${i})" style="background:#ff4d4d;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;">삭제</button>
+        </div>
       </div>
       <div class="post-meta">
         ${p.company ? `<span>🏢 ${p.company}</span>` : ''}
@@ -490,6 +497,19 @@ function renderList(posts) {
       ${p.imageUrls && p.imageUrls.length ? `<div class="post-img">${p.imageUrls.map(u=>`<img src="${u}">`).join('')}</div>` : ''}
     </div>
   `).join('');
+}
+
+async function deletePost(i) {
+  const p = window._allPosts[i];
+  if (!confirm('이 게시글을 삭제하시겠어요?')) return;
+  try {
+    await window._deleteDoc(window._doc(window._db, "inquiries", p.id));
+    window._allPosts.splice(i, 1);
+    renderList(window._allPosts);
+    document.getElementById('list-count').textContent = `총 ${window._allPosts.length}건`;
+  } catch(e) {
+    alert('삭제 실패: ' + e.message);
+  }
 }
 
 function openModal(i) {
