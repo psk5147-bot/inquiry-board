@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>견적문의 게시판</title>
 
+<!-- EmailJS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>emailjs.init("NHTVFBamNDI2ZN68ysIAT");</script>
+
 <!-- Firebase SDK -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -404,8 +408,22 @@ async function submitForm() {
       createdAt: window._serverTimestamp()
     });
 
-    // 카카오톡 알림 (아래 설정 필요)
-    sendKakaoAlert({ name: name||company, type, message });
+    // EmailJS 이메일 알림 발송
+    emailjs.send("service_yt2wnkk", "template_7y8e13q", {
+      name:    name    || '-',
+      company: company || '-',
+      phone:   phone   || '-',
+      email:   email   || '-',
+      type:    type,
+      model:   model   || '-',
+      price:   price   || '-',
+      message: message,
+      time:    new Date().toLocaleString('ko-KR')
+    }).then(() => {
+      console.log('이메일 알림 발송 완료');
+    }).catch(err => {
+      console.error('이메일 발송 실패:', err);
+    });
 
     document.getElementById('form-area').style.display = 'none';
     document.getElementById('success-box').style.display = 'block';
