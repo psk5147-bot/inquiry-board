@@ -5,7 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>견적문의 게시판</title>
 <link rel="apple-touch-icon" href="icon.png">
+<link rel="apple-touch-icon-precomposed" href="icon.png">
 <link rel="icon" href="icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="견적문의">
 
 <!-- EmailJS SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
@@ -593,6 +598,11 @@ function sendKakaoAlert(data) {
   // ✅ 설정 필요: 카카오 비즈니스 채널 + 알림톡 API 키
   // fetch('YOUR_KAKAO_WEBHOOK_OR_API', { method:'POST', body: JSON.stringify(data) });
   console.log('카카오 알림 전송 예정:', data);
+}
+</script>
+<script>
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(e=>console.log(e));
 }
 </script>
 </body>
