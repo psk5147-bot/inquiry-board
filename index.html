@@ -5,12 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>견적문의 게시판</title>
 <link rel="apple-touch-icon" href="icon.png">
-<link rel="apple-touch-icon-precomposed" href="icon.png">
 <link rel="icon" href="icon.png">
-<link rel="manifest" href="manifest.json">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="견적문의">
 
 <!-- EmailJS SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
@@ -196,8 +191,23 @@ body { font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:#
 <!-- 탭 -->
 <div class="tabs">
   <div class="tab active" onclick="showTab('write')">✏️ 견적문의 작성</div>
-  <div class="tab" onclick="showTab('list')">📄 게시글 목록</div>
-  <div class="tab" onclick="showTab('stats')">📊 통계</div>
+  <div class="tab" onclick="checkPassword('list')">📄 게시글 목록</div>
+  <div class="tab" onclick="checkPassword('stats')">📊 통계</div>
+</div>
+
+<!-- 비밀번호 모달 -->
+<div class="modal-overlay" id="pw-modal">
+  <div class="modal" style="max-width:360px;text-align:center;">
+    <h2 style="margin-bottom:16px;">🔒 관리자 확인</h2>
+    <p style="font-size:14px;color:#888;margin-bottom:20px;">게시글 목록은 관리자만 볼 수 있어요.</p>
+    <input type="password" id="pw-input" placeholder="비밀번호 입력"
+      style="width:100%;padding:12px;border:1.5px solid #dde2f0;border-radius:8px;font-size:16px;text-align:center;outline:none;"
+      onkeydown="if(event.key==='Enter')confirmPw()">
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      <button onclick="closePwModal()" style="flex:1;padding:12px;border:1.5px solid #dde2f0;background:#fff;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">취소</button>
+      <button onclick="confirmPw()" style="flex:1;padding:12px;background:#1A3FA9;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">확인</button>
+    </div>
+  </div>
 </div>
 
 <div class="container">
@@ -371,6 +381,33 @@ function showTab(name) {
   if (name === 'stats') loadStats();
 }
 
+// ── 비밀번호 확인 ─────────────────────────────────
+const ADMIN_PW = '5143'; // ✅ 여기서 비밀번호 변경 가능
+let _pendingTab = '';
+
+function checkPassword(tabName) {
+  _pendingTab = tabName;
+  document.getElementById('pw-input').value = '';
+  document.getElementById('pw-modal').classList.add('open');
+  setTimeout(() => document.getElementById('pw-input').focus(), 100);
+}
+
+function confirmPw() {
+  const pw = document.getElementById('pw-input').value;
+  if (pw === ADMIN_PW) {
+    closePwModal();
+    showTab(_pendingTab);
+  } else {
+    document.getElementById('pw-input').value = '';
+    document.getElementById('pw-input').placeholder = '비밀번호가 틀렸어요!';
+    setTimeout(() => document.getElementById('pw-input').placeholder = '비밀번호 입력', 1500);
+  }
+}
+
+function closePwModal() {
+  document.getElementById('pw-modal').classList.remove('open');
+}
+
 // ── 날짜 포맷 ─────────────────────────────────────────
 function fmtDate(ts) {
   if (!ts) return '-';
@@ -429,7 +466,7 @@ async function submitForm() {
       price:   price   || '-',
       message: message,
       time:    new Date().toLocaleString('ko-KR'),
-      images:  imageUrls.length > 0 ? imageUrls.map((u,i) => `사진${i+1}: ${u}`).join('\n') : '첨부 없음'
+      images:  imageUrls.length > 0 ? imageUrls.map((u,i) => `[사진${i+1}] ${u}`).join('\n\n') : '첨부 없음'
     }).then(() => {
       console.log('이메일 알림 발송 완료');
     }).catch(err => {
@@ -598,11 +635,6 @@ function sendKakaoAlert(data) {
   // ✅ 설정 필요: 카카오 비즈니스 채널 + 알림톡 API 키
   // fetch('YOUR_KAKAO_WEBHOOK_OR_API', { method:'POST', body: JSON.stringify(data) });
   console.log('카카오 알림 전송 예정:', data);
-}
-</script>
-<script>
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js').catch(e=>console.log(e));
 }
 </script>
 </body>
