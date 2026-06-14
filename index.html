@@ -290,12 +290,24 @@ body { font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:#
         </div>
         <div class="form-row">
           <div class="fg">
-            <label>희망 금액 <span class="opt">(선택)</span></label>
-            <input type="text" id="f-price" placeholder="0" oninput="formatPrice(this)">
+            <label>연식 <span class="opt">(선택)</span></label>
+            <input type="text" id="f-year" placeholder="예) 2015" maxlength="4" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
           </div>
           <div class="fg">
             <label>수량 <span class="opt">(선택)</span></label>
             <input type="text" id="f-qty" placeholder="0" oninput="formatNumber(this)">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="fg">
+            <label>희망 금액 <span class="opt">(선택)</span></label>
+            <input type="text" id="f-price" placeholder="0" oninput="formatPrice(this)">
+          </div>
+        </div>
+        <div class="form-row full">
+          <div class="fg">
+            <label>옵션사항 <span class="opt">(선택)</span></label>
+            <input type="text" id="f-option" placeholder="예) 오토척, 터렛, 방진구, 심압대 등">
           </div>
         </div>
         <div class="form-row full">
@@ -365,6 +377,8 @@ body { font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:#
       <dt>연락처</dt><dd id="m-phone"></dd>
       <dt>이메일</dt><dd id="m-email"></dd>
       <dt>기계명</dt><dd id="m-model"></dd>
+      <dt>연식</dt><dd id="m-year"></dd>
+      <dt>옵션사항</dt><dd id="m-option"></dd>
       <dt>희망금액</dt><dd id="m-price"></dd>
       <dt>수량</dt><dd id="m-qty"></dd>
       <dt>내용</dt><dd id="m-message"></dd>
@@ -511,7 +525,9 @@ async function submitForm() {
   const phone   = document.getElementById('f-phone').value.trim();
   const type    = document.getElementById('f-type').value;
   const model   = document.getElementById('f-model').value.trim();
+  const year    = document.getElementById('f-year').value.trim();
   const price   = document.getElementById('f-price').value.trim();
+  const option  = document.getElementById('f-option').value.trim();
   const qty     = document.getElementById('f-qty').value.trim();
   const message = document.getElementById('f-message').value.trim();
   const files   = selectedFiles.filter(Boolean).map(e => e.file);
@@ -538,7 +554,7 @@ async function submitForm() {
 
     // Firestore 저장
     await window._addDoc(window._col, {
-      name, company, email, phone, type, model, price, qty, message,
+      name, company, email, phone, type, model, year, price, option, qty, message,
       imageUrls,
       createdAt: window._serverTimestamp()
     });
@@ -551,7 +567,9 @@ async function submitForm() {
       email:   email   || '-',
       type:    type,
       model:   model   || '-',
+      year:    year    || '-',
       price:   price   || '-',
+      option:  option  || '-',
       message: message,
       time:    new Date().toLocaleString('ko-KR'),
       images:  imageUrls.length > 0 ? imageUrls.map((u,i) => `[사진${i+1}] ${u}`).join('\n\n') : '첨부 없음'
@@ -572,7 +590,7 @@ async function submitForm() {
 }
 
 function resetForm() {
-  ['f-name','f-company','f-email','f-phone','f-model','f-price','f-qty','f-message'].forEach(id => {
+  ['f-name','f-company','f-email','f-phone','f-model','f-year','f-price','f-option','f-qty','f-message'].forEach(id => {
     document.getElementById(id).value = '';
   });
   document.getElementById('f-type').value = '';
@@ -619,6 +637,8 @@ function renderList(posts) {
         ${p.phone   ? `<span>📞 ${p.phone}</span>`   : ''}
         ${p.email   ? `<span>✉️ ${p.email}</span>`   : ''}
         ${p.model   ? `<span>⚙️ ${p.model}</span>`   : ''}
+        ${p.year    ? `<span>📅 ${p.year}년식</span>` : ''}
+        ${p.option  ? `<span>🔧 ${p.option}</span>`   : ''}
         ${p.price   ? `<span>💰 ${p.price}원</span>` : ''}
       </div>
       <div class="post-content">${p.message}</div>
@@ -649,6 +669,8 @@ function openModal(i) {
   document.getElementById('m-phone').textContent   = p.phone||'-';
   document.getElementById('m-email').textContent   = p.email||'-';
   document.getElementById('m-model').textContent   = p.model||'-';
+  document.getElementById('m-year').textContent    = p.year ? p.year+'년식' : '-';
+  document.getElementById('m-option').textContent  = p.option||'-';
   document.getElementById('m-price').textContent   = p.price ? p.price+'원' : '-';
   document.getElementById('m-qty').textContent     = p.qty||'-';
   document.getElementById('m-message').textContent = p.message||'-';
