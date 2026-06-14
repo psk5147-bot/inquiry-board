@@ -95,15 +95,45 @@ body { font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:#
 }
 .fg textarea { height:130px; resize:none; line-height:1.7; }
 
-/* 파일 업로드 */
-.file-label {
-  display:flex; align-items:center; gap:10px;
-  padding:11px 14px; border:1.5px dashed #c0caf0; border-radius:8px;
-  background:#fafbff; cursor:pointer; font-size:13px; color:#888; transition:border 0.2s;
+/* 사진 그리드 업로드 */
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-top: 6px;
 }
-.file-label:hover { border-color:#1A3FA9; color:#1A3FA9; }
-.file-label input { display:none; }
-#file-name { font-size:12px; color:#1A3FA9; margin-top:5px; }
+@media (max-width: 480px) {
+  .photo-grid { grid-template-columns: repeat(5, 1fr); gap: 6px; }
+}
+.photo-cell {
+  aspect-ratio: 1;
+  border: 1.5px dashed #c0caf0;
+  border-radius: 8px;
+  background: #fafbff;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; position: relative; overflow: hidden;
+  transition: border-color 0.2s;
+}
+.photo-cell:hover { border-color: #1A3FA9; }
+.photo-cell .plus {
+  font-size: 24px; color: #c0caf0; line-height: 1;
+  transition: color 0.2s;
+}
+.photo-cell:hover .plus { color: #1A3FA9; }
+.photo-cell img {
+  width: 100%; height: 100%; object-fit: cover;
+  border-radius: 6px;
+}
+.photo-cell .del-btn {
+  position: absolute; top: 3px; right: 3px;
+  width: 18px; height: 18px;
+  background: rgba(0,0,0,0.55); color: #fff;
+  border: none; border-radius: 50%;
+  font-size: 11px; line-height: 18px; text-align: center;
+  cursor: pointer; padding: 0;
+}
+.photo-cell input[type=file] { display: none; }
+#photo-count { font-size: 12px; color: #1A3FA9; margin-top: 5px; }
 
 /* 개인정보 안내 */
 .privacy-notice {
@@ -277,12 +307,10 @@ body { font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:#
         <div class="form-row full">
           <div class="fg">
             <label>사진 첨부 <span class="opt">(선택, 최대 10장)</span></label>
-            <label class="file-label">
-              📎 사진을 선택하세요
-              <input type="file" id="f-images" accept="image/*" multiple onchange="previewFiles(this)">
-            </label>
-            <div id="file-name"></div>
-            <div id="preview-wrap" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"></div>
+            <div class="photo-grid" id="photo-grid">
+              <!-- JS로 10칸 생성 -->
+            </div>
+            <div id="photo-count"></div>
           </div>
         </div>
 
@@ -357,22 +385,96 @@ function formatNumber(el) {
   el.value = v ? Number(v).toLocaleString() : '';
 }
 
-// ── 파일 미리보기 ──────────────────────────────────────
-function previewFiles(input) {
-  const files = Array.from(input.files).slice(0, 10);
-  document.getElementById('file-name').textContent = files.map(f => f.name).join(', ');
-  const wrap = document.getElementById('preview-wrap');
-  wrap.innerHTML = '';
-  files.forEach(f => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const img = document.createElement('img');
-      img.src = e.target.result;
-      img.style.cssText = 'height:70px;border-radius:6px;border:1px solid #dde2f0;object-fit:cover;';
-      wrap.appendChild(img);
-    };
-    reader.readAsDataURL(f);
+// ── 사진 그리드 초기화 ──────────────────────────────────
+const MAX_PHOTOS = 10;
+let selectedFiles = []; // { file, dataUrl } 배열
+
+function initPhotoGrid() {
+  const grid = document.getElementById('photo-grid');
+  grid.innerHTML = '';
+  for (let i = 0; i < MAX_PHOTOS; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'photo-cell';
+    cell.dataset.index = i;
+    cell.innerHTML = `
+      <span class="plus">+</span>
+      <input type="file" accept="image/*" capture="environment">
+    `;
+    const input = cell.querySelector('input');
+    cell.addEventListener('click', () => input.click());
+    input.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      // 빈 슬롯 중 이 칸 인덱스 찾기
+      addPhotoToSlot(i, file);
+      input.value = '';
+    });
+    grid.appendChild(cell);
+  }
+  updatePhotoCount();
+}
+
+function addPhotoToSlot(slotIndex, file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    // selectedFiles 배열에서 해당 슬롯 업데이트
+    selectedFiles[slotIndex] = { file, dataUrl: e.target.result };
+    renderPhotoGrid();
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderPhotoGrid() {
+  const cells = document.querySelectorAll('.photo-cell');
+  cells.forEach((cell, i) => {
+    const entry = selectedFiles[i];
+    if (entry) {
+      cell.innerHTML = `
+        <img src="${entry.dataUrl}">
+        <button class="del-btn" onclick="removePhoto(event, ${i})">✕</button>
+        <input type="file" accept="image/*" capture="environment" style="display:none">
+      `;
+      // 이미 채워진 칸 클릭 시 교체
+      const input = cell.querySelector('input');
+      cell.onclick = () => input.click();
+      input.addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        addPhotoToSlot(i, file);
+        input.value = '';
+      });
+    } else {
+      cell.innerHTML = `
+        <span class="plus">+</span>
+        <input type="file" accept="image/*" capture="environment" style="display:none">
+      `;
+      const input = cell.querySelector('input');
+      cell.onclick = () => input.click();
+      input.addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        addPhotoToSlot(i, file);
+        input.value = '';
+      });
+    }
   });
+  updatePhotoCount();
+}
+
+function removePhoto(e, index) {
+  e.stopPropagation();
+  selectedFiles[index] = null;
+  renderPhotoGrid();
+}
+
+function updatePhotoCount() {
+  const count = selectedFiles.filter(Boolean).length;
+  document.getElementById('photo-count').textContent = count > 0 ? `${count}장 선택됨` : '';
+}
+
+function resetPhotoGrid() {
+  selectedFiles = [];
+  initPhotoGrid();
 }
 
 // ── 탭 전환 ───────────────────────────────────────────
@@ -432,7 +534,7 @@ async function submitForm() {
   const price   = document.getElementById('f-price').value.trim();
   const qty     = document.getElementById('f-qty').value.trim();
   const message = document.getElementById('f-message').value.trim();
-  const files   = document.getElementById('f-images').files;
+  const files   = selectedFiles.filter(Boolean).map(e => e.file);
 
   if (!name && !company)    return alert('이름 또는 회사명을 입력해주세요.');
   if (!email && !phone)     return alert('이메일 또는 연락처를 입력해주세요.');
@@ -447,7 +549,7 @@ async function submitForm() {
   try {
     // 이미지 업로드
     const imageUrls = [];
-    for (const file of Array.from(files).slice(0, 10)) {
+    for (const file of files.slice(0, 10)) {
       const storageRef = window._ref(window._storage, `inquiries/${Date.now()}_${file.name}`);
       await window._uploadBytes(storageRef, file);
       const url = await window._getDownloadURL(storageRef);
@@ -494,9 +596,7 @@ function resetForm() {
     document.getElementById(id).value = '';
   });
   document.getElementById('f-type').value = '';
-  document.getElementById('f-images').value = '';
-  document.getElementById('file-name').textContent = '';
-  document.getElementById('preview-wrap').innerHTML = '';
+  resetPhotoGrid();
   document.getElementById('form-area').style.display = '';
   document.getElementById('success-box').style.display = 'none';
   document.getElementById('btn-submit').disabled = false;
@@ -642,6 +742,8 @@ function sendKakaoAlert(data) {
   // fetch('YOUR_KAKAO_WEBHOOK_OR_API', { method:'POST', body: JSON.stringify(data) });
   console.log('카카오 알림 전송 예정:', data);
 }
+
+document.addEventListener('DOMContentLoaded', initPhotoGrid);
 </script>
 </body>
 </html>
