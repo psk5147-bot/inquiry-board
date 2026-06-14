@@ -385,86 +385,65 @@ function formatNumber(el) {
   el.value = v ? Number(v).toLocaleString() : '';
 }
 
-// ── 사진 그리드 초기화 ──────────────────────────────────
+// ── 사진 그리드 ──────────────────────────────────────────
 const MAX_PHOTOS = 10;
-let selectedFiles = []; // { file, dataUrl } 배열
+let selectedFiles = new Array(MAX_PHOTOS).fill(null);
 
 function initPhotoGrid() {
+  selectedFiles = new Array(MAX_PHOTOS).fill(null);
   const grid = document.getElementById('photo-grid');
   grid.innerHTML = '';
+
   for (let i = 0; i < MAX_PHOTOS; i++) {
+    // 숨겨진 input (한 번만 생성, 재사용)
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.style.display = 'none';
+    input.addEventListener('change', function() {
+      const file = this.files[0];
+      if (!file) return;
+      const idx = parseInt(this.dataset.slot);
+      const reader = new FileReader();
+      reader.onload = ev => {
+        selectedFiles[idx] = { file, dataUrl: ev.target.result };
+        this.value = '';
+        renderCell(idx);
+        updatePhotoCount();
+      };
+      reader.readAsDataURL(file);
+    });
+    document.body.appendChild(input);
+
+    // 셀 생성
     const cell = document.createElement('div');
     cell.className = 'photo-cell';
-    cell.dataset.index = i;
-    cell.innerHTML = `
-      <span class="plus">+</span>
-      <input type="file" accept="image/*" capture="environment">
-    `;
-    const input = cell.querySelector('input');
-    cell.addEventListener('click', () => input.click());
-    input.addEventListener('change', e => {
-      const file = e.target.files[0];
-      if (!file) return;
-      // 빈 슬롯 중 이 칸 인덱스 찾기
-      addPhotoToSlot(i, file);
-      input.value = '';
+    cell.id = 'photo-cell-' + i;
+    cell.innerHTML = '<span class="plus">+</span>';
+    cell.addEventListener('click', () => {
+      input.dataset.slot = i;
+      input.click();
     });
     grid.appendChild(cell);
   }
   updatePhotoCount();
 }
 
-function addPhotoToSlot(slotIndex, file) {
-  const reader = new FileReader();
-  reader.onload = e => {
-    // selectedFiles 배열에서 해당 슬롯 업데이트
-    selectedFiles[slotIndex] = { file, dataUrl: e.target.result };
-    renderPhotoGrid();
-  };
-  reader.readAsDataURL(file);
-}
-
-function renderPhotoGrid() {
-  const cells = document.querySelectorAll('.photo-cell');
-  cells.forEach((cell, i) => {
-    const entry = selectedFiles[i];
-    if (entry) {
-      cell.innerHTML = `
-        <img src="${entry.dataUrl}">
-        <button class="del-btn" onclick="removePhoto(event, ${i})">✕</button>
-        <input type="file" accept="image/*" capture="environment" style="display:none">
-      `;
-      // 이미 채워진 칸 클릭 시 교체
-      const input = cell.querySelector('input');
-      cell.onclick = () => input.click();
-      input.addEventListener('change', e => {
-        const file = e.target.files[0];
-        if (!file) return;
-        addPhotoToSlot(i, file);
-        input.value = '';
-      });
-    } else {
-      cell.innerHTML = `
-        <span class="plus">+</span>
-        <input type="file" accept="image/*" capture="environment" style="display:none">
-      `;
-      const input = cell.querySelector('input');
-      cell.onclick = () => input.click();
-      input.addEventListener('change', e => {
-        const file = e.target.files[0];
-        if (!file) return;
-        addPhotoToSlot(i, file);
-        input.value = '';
-      });
-    }
-  });
-  updatePhotoCount();
+function renderCell(i) {
+  const cell = document.getElementById('photo-cell-' + i);
+  const entry = selectedFiles[i];
+  if (entry) {
+    cell.innerHTML = `<img src="${entry.dataUrl}"><button class="del-btn" onclick="removePhoto(event,${i})">✕</button>`;
+  } else {
+    cell.innerHTML = '<span class="plus">+</span>';
+  }
 }
 
 function removePhoto(e, index) {
   e.stopPropagation();
   selectedFiles[index] = null;
-  renderPhotoGrid();
+  renderCell(index);
+  updatePhotoCount();
 }
 
 function updatePhotoCount() {
@@ -473,7 +452,8 @@ function updatePhotoCount() {
 }
 
 function resetPhotoGrid() {
-  selectedFiles = [];
+  // 숨겨진 input 제거
+  document.querySelectorAll('input[data-slot]').forEach(el => el.remove());
   initPhotoGrid();
 }
 
